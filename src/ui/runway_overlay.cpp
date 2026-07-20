@@ -11,8 +11,6 @@
 #include "ui/radar_range.h"
 #include "ui/radar_theme.h"
 
-namespace fonts = lgfx::v1::fonts;
-
 namespace ui::runway {
 namespace {
 
@@ -25,7 +23,7 @@ bool s_label_pending[data::large_airports::kAirportCount];
 bool s_runway_label_ready = false;
 bool s_runway_label_use_vlw = false;
 float s_runway_label_vlw_size = 0.38f;
-const lgfx::GFXfont* s_runway_label_gfx = &fonts::FreeSansBold12pt7b;
+const lgfx::GFXfont* s_runway_label_gfx = &lgfx::v1::fonts::FreeSansBold12pt7b;
 
 int measureVlwHeight(lgfx::LGFXBase& gfx, float size) {
   gfx.setTextSize(size);
@@ -56,7 +54,7 @@ void initRunwayLabelStyle(lgfx::LGFXBase& gfx) {
     s_runway_label_use_vlw = true;
     s_runway_label_vlw_size = findVlwSizeForHeight(gfx, target);
   } else {
-    s_runway_label_gfx = &fonts::FreeSansBold12pt7b;
+    s_runway_label_gfx = &lgfx::v1::fonts::FreeSansBold12pt7b;
     s_runway_label_use_vlw = false;
   }
   s_runway_label_ready = true;
@@ -71,6 +69,17 @@ void applyRunwayLabelStyle(lgfx::LGFXBase& gfx) {
 }
 
 float e7ToDeg(int32_t e7) { return static_cast<float>(e7) * 1e-7f; }
+
+void applyDisplayRotation(float* dx_km, float* dy_km) {
+  constexpr float kDegToRad = 0.01745329252f;
+  const float theta = ui::radar::orientationDegrees() * kDegToRad;
+  const float cos_t = cosf(theta);
+  const float sin_t = sinf(theta);
+  const float x = *dx_km;
+  const float y = *dy_km;
+  *dx_km = cos_t * x + sin_t * y;
+  *dy_km = -sin_t * x + cos_t * y;
+}
 
 void offsetKmFromCenter(float lat, float lon, float* dx_km, float* dy_km,
                         float* dist_km) {
@@ -90,6 +99,7 @@ void latLonToScreen(float lat, float lon, int* out_x, int* out_y) {
   float dy_km = 0.0f;
   float dist_km = 0.0f;
   offsetKmFromCenter(lat, lon, &dx_km, &dy_km, &dist_km);
+  applyDisplayRotation(&dx_km, &dy_km);
 
   *out_x = radar::kCenterX + static_cast<int>(lroundf(dx_km * px_per_km));
   *out_y = radar::kCenterY - static_cast<int>(lroundf(dy_km * px_per_km));

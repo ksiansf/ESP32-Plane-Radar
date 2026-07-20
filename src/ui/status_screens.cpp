@@ -11,8 +11,6 @@
 #include "hardware/display.h"
 #include "hardware/display_font.h"
 
-namespace fonts = lgfx::v1::fonts;
-
 namespace {
 
 constexpr int kLineGap = 6;
@@ -38,13 +36,13 @@ float s_spinner_angle_deg = -90.0f;
 SpinnerDot s_spinner_dots[kSpinnerDotCount];
 bool s_connecting_text_drawn = false;
 
-constexpr auto& kGfxTitle = fonts::FreeSans18pt7b;
-constexpr auto& kGfxBody = fonts::FreeSans12pt7b;
-constexpr auto& kGfxDetail = fonts::Font2;
-constexpr auto& kPortalGfxTitle = fonts::FreeSansBold18pt7b;
-constexpr auto& kPortalGfxBody = fonts::FreeSansBold12pt7b;
-constexpr auto& kPortalGfxEmphasis = fonts::FreeSansBold18pt7b;
-constexpr auto& kConnectingGfxDetail = fonts::FreeSans9pt7b;
+constexpr auto& kGfxTitle = lgfx::v1::fonts::FreeSans18pt7b;
+constexpr auto& kGfxBody = lgfx::v1::fonts::FreeSans12pt7b;
+constexpr auto& kGfxDetail = lgfx::v1::fonts::Font2;
+constexpr auto& kPortalGfxTitle = lgfx::v1::fonts::FreeSansBold18pt7b;
+constexpr auto& kPortalGfxBody = lgfx::v1::fonts::FreeSansBold12pt7b;
+constexpr auto& kPortalGfxEmphasis = lgfx::v1::fonts::FreeSansBold18pt7b;
+constexpr auto& kConnectingGfxDetail = lgfx::v1::fonts::FreeSans9pt7b;
 
 struct TextLine {
   const char* text;

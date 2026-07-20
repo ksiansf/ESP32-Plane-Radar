@@ -45,6 +45,10 @@ float fetchRadiusKm();
 
 bool useMiles();
 bool showRunways();
+int orientationDegrees();
+void saveOrientationFromPortal(const char* value);
+void formatOrientationLabel(char* buf, size_t len);
+void orientationReset();
 /** WiFi portal checkbox: "T" = miles, otherwise km. */
 void saveMilesFromPortal(const char* checkbox_value);
 void saveRunwaysFromPortal(const char* checkbox_value);

@@ -15,8 +15,6 @@
 #include "ui/radar_theme.h"
 #include "ui/runway_overlay.h"
 
-namespace fonts = lgfx::v1::fonts;
-
 namespace ui {
 namespace radar {
 
@@ -41,9 +39,9 @@ bool s_scale_use_vlw = false;
 float s_cardinal_vlw_size = 0.56f;
 float s_scale_vlw_size = 0.50f;
 float s_tag_vlw_size = 0.56f;
-const lgfx::GFXfont* s_cardinal_gfx = &fonts::FreeSansBold12pt7b;
-const lgfx::GFXfont* s_scale_gfx = &fonts::FreeSansBold9pt7b;
-const lgfx::GFXfont* s_tag_gfx = &fonts::FreeSansBold12pt7b;
+const lgfx::GFXfont* s_cardinal_gfx = &lgfx::v1::fonts::FreeSansBold12pt7b;
+const lgfx::GFXfont* s_scale_gfx = &lgfx::v1::fonts::FreeSansBold9pt7b;
+const lgfx::GFXfont* s_tag_gfx = &lgfx::v1::fonts::FreeSansBold12pt7b;
 
 bool s_tag_label_metrics_ready = false;
 bool s_tag_use_vlw = false;
@@ -123,16 +121,16 @@ void initLabelMetrics() {
     s_scale_use_vlw = true;
     s_scale_vlw_size = findVlwSizeForHeight(scale_target);
   } else {
-    const lgfx::GFXfont* cardinal_candidates[] = {&fonts::FreeSansBold12pt7b,
-                                                  &fonts::FreeSansBold9pt7b};
+    const lgfx::GFXfont* cardinal_candidates[] = {&lgfx::v1::fonts::FreeSansBold12pt7b,
+                            &lgfx::v1::fonts::FreeSansBold9pt7b};
     s_cardinal_gfx =
         pickGfxFontClosest(cardinal_target, cardinal_candidates, 2);
     s_cardinal_use_vlw = false;
 
     const int cardinal_h = measureGfxHeight(*s_cardinal_gfx);
     const int scale_target = cardinal_h - radar::kScaleBelowCardinalPx;
-    const lgfx::GFXfont* scale_candidates[] = {&fonts::FreeSansBold9pt7b,
-                                               &fonts::FreeSansBold12pt7b};
+    const lgfx::GFXfont* scale_candidates[] = {&lgfx::v1::fonts::FreeSansBold9pt7b,
+                           &lgfx::v1::fonts::FreeSansBold12pt7b};
     s_scale_gfx = pickGfxFontClosest(scale_target, scale_candidates, 2);
     s_scale_use_vlw = false;
   }
@@ -165,8 +163,8 @@ void initTagLabelMetrics() {
     s_tag_use_vlw = true;
     s_tag_vlw_size = findVlwSizeForHeight(target);
   } else {
-    const lgfx::GFXfont* tag_candidates[] = {&fonts::FreeSansBold12pt7b,
-                                               &fonts::FreeSansBold9pt7b};
+    const lgfx::GFXfont* tag_candidates[] = {&lgfx::v1::fonts::FreeSansBold12pt7b,
+                           &lgfx::v1::fonts::FreeSansBold9pt7b};
     s_tag_gfx = pickGfxFontClosest(target, tag_candidates, 2);
     s_tag_use_vlw = false;
   }
@@ -201,6 +199,17 @@ void initPalette() {
 
 constexpr float kKmPerDeg = 111.0f;
 
+void applyDisplayRotation(float* dx_km, float* dy_km) {
+  constexpr float kDegToRad = 0.01745329252f;
+  const float theta = ui::radar::orientationDegrees() * kDegToRad;
+  const float cos_t = cosf(theta);
+  const float sin_t = sinf(theta);
+  const float x = *dx_km;
+  const float y = *dy_km;
+  *dx_km = cos_t * x + sin_t * y;
+  *dy_km = -sin_t * x + cos_t * y;
+}
+
 void offsetKmFromCenter(float lat, float lon, float* dx_km, float* dy_km,
                         float* dist_km) {
   *dx_km =
@@ -226,6 +235,7 @@ void latLonToScreen(float lat, float lon, int* out_x, int* out_y) {
   float dy_km = 0.0f;
   float dist_km = 0.0f;
   offsetKmFromCenter(lat, lon, &dx_km, &dy_km, &dist_km);
+  applyDisplayRotation(&dx_km, &dy_km);
 
   *out_x = radar::kCenterX + static_cast<int>(lroundf(dx_km * px_per_km));
   *out_y = radar::kCenterY - static_cast<int>(lroundf(dy_km * px_per_km));
@@ -257,6 +267,7 @@ bool beyondRingEdgeDotFromLatLon(float lat, float lon, int* out_x, int* out_y) {
     return false;
   }
 
+  applyDisplayRotation(&dx_km, &dy_km);
   const int cx = radar::kCenterX;
   const int cy = radar::kCenterY;
   const int rim_r = radar::kCenterX - radar::kBeyondRingScreenMarginPx;
@@ -326,6 +337,7 @@ void noseTip(int cx, int cy, float heading_deg, int* tip_x, int* tip_y) {
 }
 
 void drawHeadingTriangle(int cx, int cy, float heading_deg, uint16_t color) {
+  heading_deg += static_cast<float>(ui::radar::orientationDegrees());
   constexpr float kDegToRad = 0.01745329252f;
   const float rad = heading_deg * kDegToRad;
   const float sin_h = sinf(rad);
@@ -353,6 +365,9 @@ void drawSpeedVector(int cx, int cy, float heading_deg, float track_deg,
   if (len <= 0) {
     return;
   }
+
+  heading_deg += static_cast<float>(ui::radar::orientationDegrees());
+  track_deg += static_cast<float>(ui::radar::orientationDegrees());
 
   int tip_x = 0;
   int tip_y = 0;
@@ -603,26 +618,59 @@ void drawRings(int cx, int cy, int outer_radius) {
 }
 
 void drawCrosshairs(int cx, int cy, int radius, uint16_t color) {
-  s_draw->drawWideLine(cx, cy - radius, cx, cy + radius,
-                       radar::kGridStrokeHalfWidth, color);
-  s_draw->drawWideLine(cx - radius, cy, cx + radius, cy,
-                       radar::kGridStrokeHalfWidth, color);
+  constexpr float kDegToRad = 0.01745329252f;
+  const float theta = ui::radar::orientationDegrees() * kDegToRad;
+  const float cos_t = cosf(theta);
+  const float sin_t = sinf(theta);
+
+  const int x0 = cx + static_cast<int>(lroundf(sin_t * radius));
+  const int y0 = cy + static_cast<int>(lroundf(cos_t * radius));
+  const int x1 = cx - static_cast<int>(lroundf(sin_t * radius));
+  const int y1 = cy - static_cast<int>(lroundf(cos_t * radius));
+  s_draw->drawWideLine(x0, y0, x1, y1, radar::kGridStrokeHalfWidth, color);
+
+  const int x2 = cx + static_cast<int>(lroundf(cos_t * radius));
+  const int y2 = cy - static_cast<int>(lroundf(sin_t * radius));
+  const int x3 = cx - static_cast<int>(lroundf(cos_t * radius));
+  const int y3 = cy + static_cast<int>(lroundf(sin_t * radius));
+  s_draw->drawWideLine(x2, y2, x3, y3, radar::kGridStrokeHalfWidth, color);
 }
 
 void drawCenterDot(int cx, int cy) {
   s_draw->fillSmoothCircle(cx, cy, radar::kCenterDotRadius, radar::kColorCenter);
 }
 
-void drawCardinalLabels() {
-  const int cx = radar::kCenterX;
-  const int cy = radar::kCenterY;
-  const int edge = radar::kSize - 1;
+textdatum_t cardinalDatum(float angle_deg) {
+  float normalized = fmodf(angle_deg, 360.0f);
+  if (normalized < 0.0f) {
+    normalized += 360.0f;
+  }
+  if (normalized < 45.0f || normalized >= 315.0f) {
+    return textdatum_t::top_center;
+  }
+  if (normalized < 135.0f) {
+    return textdatum_t::middle_right;
+  }
+  if (normalized < 225.0f) {
+    return textdatum_t::bottom_center;
+  }
+  return textdatum_t::middle_left;
+}
 
-  drawCardinalLabel("N", cx, radar::kCardinalNorthOffsetY, textdatum_t::top_center);
-  drawCardinalLabel("S", cx, edge + radar::kCardinalSouthOffsetY,
-                    textdatum_t::bottom_center);
-  drawCardinalLabel("W", 0, cy, textdatum_t::middle_left);
-  drawCardinalLabel("E", edge, cy, textdatum_t::middle_right);
+void drawCardinalLabelAtAngle(const char* text, float angle_deg) {
+  const float rad = angle_deg * 0.01745329252f;
+  const int label_r = radar::kCenterX;
+  const int x = radar::kCenterX + static_cast<int>(lroundf(sinf(rad) * label_r));
+  const int y = radar::kCenterY - static_cast<int>(lroundf(cosf(rad) * label_r));
+  drawCardinalLabel(text, x, y, cardinalDatum(angle_deg));
+}
+
+void drawCardinalLabels() {
+  const float orientation = static_cast<float>(ui::radar::orientationDegrees());
+  drawCardinalLabelAtAngle("N", orientation);
+  drawCardinalLabelAtAngle("E", orientation + 90.0f);
+  drawCardinalLabelAtAngle("S", orientation + 180.0f);
+  drawCardinalLabelAtAngle("W", orientation + 270.0f);
 }
 
 int scaleLabelAnchorX(int cx, int outer_radius) {
@@ -632,8 +680,12 @@ int scaleLabelAnchorX(int cx, int outer_radius) {
 void drawScaleLabel(int cx, int cy, int outer_radius) {
   char scale_label[12];
   radar::formatCurrentRing3Label(scale_label, sizeof(scale_label));
-  drawScaleLabelWithBackground(scale_label,
-                               scaleLabelAnchorX(cx, outer_radius), cy);
+  const float angle_deg = ui::radar::orientationDegrees() + 90.0f;
+  constexpr float kDegToRad = 0.01745329252f;
+  const int label_r = outer_radius + radar::kScaleGapFromOuterRing;
+  const int x = cx + static_cast<int>(lroundf(sinf(angle_deg * kDegToRad) * label_r));
+  const int y = cy + static_cast<int>(lroundf(cosf(angle_deg * kDegToRad) * label_r));
+  drawScaleLabelWithBackground(scale_label, x, y);
 }
 
 template <typename Gfx>
