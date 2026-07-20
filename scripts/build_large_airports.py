@@ -67,7 +67,8 @@ def build_dataset() -> tuple[
 
     large_idents: dict[str, tuple[int, int]] = {}
     for a in airports:
-        if a.get("type") != "large_airport":
+        airport_type = a.get("type")
+        if airport_type not in ("large_airport", "medium_airport"):
             continue
         ident = (a.get("ident") or "").strip()
         if len(ident) != 4:

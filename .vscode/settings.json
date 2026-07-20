@@ -1,0 +1,8 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "/^cd 'c:\\\\Users\\\\fsilion\\\\OneDrive - Expleo France\\\\MiscRepo\\\\ESP32-Plane-Radar' ; python scripts/build_large_airports\\.py$/": {
+            "approve": true,
+            "matchCommandLine": true
+        }
+    }
+}
