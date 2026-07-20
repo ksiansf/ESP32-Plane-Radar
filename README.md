@@ -44,6 +44,7 @@ The same portal runs on the setup AP and on the device’s LAN IP while connecte
 | **Latitude / Longitude** | Radar center and ADS-B query position (defaults in `config.h` until set) |
 | **Display distances in miles** | Ring scale label in **mi** instead of **km** (e.g. `6mi` vs `10km`) |
 | **Show airport runways** | Major-airport runway overlay on the radar (off to hide) |
+| **North orientation (deg)** | Which display direction corresponds to geographic north (integer 0–359). `0` = north at the top of the round display, `90` = north at the right, etc. Saved to NVS (`planeradar` namespace, key `orient`) and persisted across reboots. |
 
 After a reset, the device reboots and shows the setup screen immediately (no “Connecting” loop on stale credentials).
 
