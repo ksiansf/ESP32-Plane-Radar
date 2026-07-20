@@ -624,15 +624,15 @@ void drawCrosshairs(int cx, int cy, int radius, uint16_t color) {
   const float sin_t = sinf(theta);
 
   const int x0 = cx + static_cast<int>(lroundf(sin_t * radius));
-  const int y0 = cy + static_cast<int>(lroundf(cos_t * radius));
+  const int y0 = cy - static_cast<int>(lroundf(cos_t * radius));
   const int x1 = cx - static_cast<int>(lroundf(sin_t * radius));
-  const int y1 = cy - static_cast<int>(lroundf(cos_t * radius));
+  const int y1 = cy + static_cast<int>(lroundf(cos_t * radius));
   s_draw->drawWideLine(x0, y0, x1, y1, radar::kGridStrokeHalfWidth, color);
 
   const int x2 = cx + static_cast<int>(lroundf(cos_t * radius));
-  const int y2 = cy - static_cast<int>(lroundf(sin_t * radius));
+  const int y2 = cy + static_cast<int>(lroundf(sin_t * radius));
   const int x3 = cx - static_cast<int>(lroundf(cos_t * radius));
-  const int y3 = cy + static_cast<int>(lroundf(sin_t * radius));
+  const int y3 = cy - static_cast<int>(lroundf(sin_t * radius));
   s_draw->drawWideLine(x2, y2, x3, y3, radar::kGridStrokeHalfWidth, color);
 }
 
