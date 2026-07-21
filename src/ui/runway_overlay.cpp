@@ -298,6 +298,14 @@ void drawLargeAirportRunways(lgfx::LGFXBase& gfx) {
     return;
   }
 
+  // Keep runway lines visible at all ranges, but hide airport name labels
+  // when the user-selected ring-3 distance is large (>= 50 km).
+  const float ring3_km = radar::rangeCurrent().ring3_km;
+  const bool show_labels = ring3_km < 50.0f;
+  if (!show_labels) {
+    return;
+  }
+
   initRunwayLabelStyle(gfx);
   applyRunwayLabelStyle(gfx);
   for (size_t i = 0; i < label_count; ++i) {
