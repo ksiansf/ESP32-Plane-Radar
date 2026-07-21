@@ -417,13 +417,13 @@ int measureTagBlockWidth(const services::adsb::Aircraft& plane) {
   return max_w;
 }
 
-void drawAircraftTag(int x, int y, const services::adsb::Aircraft& plane) {
+void drawAircraftTag(int x, int y, const services::adsb::Aircraft& plane, int tag_mode) {
   initTagLabelMetrics();
   applyTagStyle();
 
   const int line_h = s_draw->fontHeight();
   const int block_w = measureTagBlockWidth(plane);
-  const int block_h = line_h * 3;
+  const int block_h = (tag_mode == 1) ? line_h : line_h * 3;
   int ly = y - block_h / 2;
 
   const int symbol_half =
@@ -442,21 +442,23 @@ void drawAircraftTag(int x, int y, const services::adsb::Aircraft& plane) {
   }
   ly = std::max(1, std::min(ly, radar::kSize - block_h - 1));
 
-  if (plane.callsign[0] != '\0') {
+  if (tag_mode != 2 && plane.callsign[0] != '\0') {
     s_draw->setTextColor(radar::kColorLabel, radar::kColorBackground);
     s_draw->drawString(plane.callsign, anchor_x, ly);
   }
-  ly += line_h;
+  if (tag_mode == 0) {
+    ly += line_h;
 
-  if (plane.type[0] != '\0') {
-    s_draw->setTextColor(radar::kColorTagType, radar::kColorBackground);
-    s_draw->drawString(plane.type, anchor_x, ly);
-  }
-  ly += line_h;
+    if (plane.type[0] != '\0') {
+      s_draw->setTextColor(radar::kColorTagType, radar::kColorBackground);
+      s_draw->drawString(plane.type, anchor_x, ly);
+    }
+    ly += line_h;
 
-  if (plane.alt[0] != '\0') {
-    s_draw->setTextColor(radar::kColorTagAltitude, radar::kColorBackground);
-    s_draw->drawString(plane.alt, anchor_x, ly);
+    if (plane.alt[0] != '\0') {
+      s_draw->setTextColor(radar::kColorTagAltitude, radar::kColorBackground);
+      s_draw->drawString(plane.alt, anchor_x, ly);
+    }
   }
 }
 
@@ -499,6 +501,10 @@ void sortBeyondDotsFarFirst(BeyondDotDrawItem* items, size_t count) {
 
 void drawAircraft() {
   initLabelMetrics();
+
+  const float ring3_km = radar::rangeCurrent().ring3_km;
+  // tag_mode: 0 = full (<30 km), 1 = callsign-only (>=30 && <50), 2 = none (>=50)
+  const int tag_mode = (ring3_km >= 50.0f) ? 2 : ((ring3_km >= 30.0f) ? 1 : 0);
 
   const size_t n = services::adsb::aircraftCount();
   const services::adsb::Aircraft* planes = services::adsb::aircraftList();
@@ -548,13 +554,17 @@ void drawAircraft() {
     const size_t i = items[d].index;
     const int x = items[d].x;
     const int y = items[d].y;
-    drawSpeedVector(x, y, planes[i].nose_deg, planes[i].track_deg,
-                    planes[i].gs_knots, radar::kColorTrackVector);
+    if (tag_mode == 0) {
+      drawSpeedVector(x, y, planes[i].nose_deg, planes[i].track_deg,
+                      planes[i].gs_knots, radar::kColorTrackVector);
+    }
     drawHeadingTriangle(x, y, planes[i].nose_deg, radar::kColorAircraft);
   }
   for (size_t d = 0; d < draw_count; ++d) {
     const size_t i = items[d].index;
-    drawAircraftTag(items[d].x, items[d].y, planes[i]);
+    if (tag_mode != 2) {
+      drawAircraftTag(items[d].x, items[d].y, planes[i], tag_mode);
+    }
   }
 }
 
@@ -683,8 +693,35 @@ void drawScaleLabel(int cx, int cy, int outer_radius) {
   const float angle_deg = ui::radar::orientationDegrees() + 90.0f;
   constexpr float kDegToRad = 0.01745329252f;
   const int label_r = outer_radius + radar::kScaleGapFromOuterRing;
-  const int x = cx + static_cast<int>(lroundf(sinf(angle_deg * kDegToRad) * label_r));
-  const int y = cy + static_cast<int>(lroundf(cosf(angle_deg * kDegToRad) * label_r));
+  const float angle_rad = angle_deg * kDegToRad;
+  float ax = cx + static_cast<float>(sinf(angle_rad)) * label_r;
+  float ay = cy + static_cast<float>(cosf(angle_rad)) * label_r;
+
+  // Ensure the scale label background is fully on the ROUND screen by
+  // keeping the anchor point inside a reduced radius so the label's
+  // background rectangle corners remain within the circular grid.
+  applyScaleStyle();
+  const int tw = s_draw->textWidth(scale_label);
+  const int th = s_draw->fontHeight();
+  constexpr int kPadX = 3;
+  constexpr int kPadY = 2;
+
+  const float W = static_cast<float>(tw + kPadX);
+  const float H = static_cast<float>(th / 2 + kPadY);
+  const float corner_r = sqrtf(W * W + H * H);
+
+  const float dx = ax - static_cast<float>(cx);
+  const float dy = ay - static_cast<float>(cy);
+  const float dist = sqrtf(dx * dx + dy * dy);
+  const float max_anchor_r = static_cast<float>(outer_radius) - corner_r - 1.0f;
+  if (dist > max_anchor_r && dist > 0.0f) {
+    const float scale = max_anchor_r / dist;
+    ax = static_cast<float>(cx) + dx * scale;
+    ay = static_cast<float>(cy) + dy * scale;
+  }
+
+  const int x = static_cast<int>(lroundf(ax));
+  const int y = static_cast<int>(lroundf(ay));
   drawScaleLabelWithBackground(scale_label, x, y);
 }
 
@@ -729,6 +766,7 @@ void renderFrame() {
   {
     const DrawScope scope(s_frame);
     drawAircraft();
+    drawScaleLabel(radar::kCenterX, radar::kCenterY, radar::kGridOuterRadius);
   }
   s_frame.pushSprite(0, 0);
   tft.setTextDatum(textdatum_t::top_left);
@@ -749,6 +787,7 @@ void radarDisplayDraw() {
   const DrawScope scope(tft);
   drawStaticGrid(tft);
   drawAircraft();
+  drawScaleLabel(radar::kCenterX, radar::kCenterY, radar::kGridOuterRadius);
   tft.setTextDatum(textdatum_t::top_left);
 }
 

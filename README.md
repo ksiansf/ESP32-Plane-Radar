@@ -17,7 +17,7 @@ After Wi‑Fi is saved, the device reconnects automatically; the radar runs in t
 
 | Action | Effect |
 |--------|--------|
-| **Short tap** | Cycle range preset (5 → 10 → 15 → 25 km); saved to flash |
+| **Short tap** | Cycle range preset (5 → 10 → 15 → 25 → 30 → 50 → 100 km); saved to flash |
 | **Hold 3 s** | Clear Wi‑Fi, location, and units; reboot into setup portal |
 
 During setup you can also hold BOOT at power-on to force a credential reset (same as the long press).
@@ -66,6 +66,9 @@ Layout and colors: `include/ui/radar_theme.h`.
 | 10 km / 6 mi | ~13.3 km (default) |
 | 15 km / 9 mi | ~20 km |
 | 25 km / 16 mi | ~33.3 km |
+| 30 km / 19 mi | ~40.0 km |
+| 50 km / 31 mi | ~66.7 km |
+| 100 km / 62 mi | ~133.3 km |
 
 Preset and miles/km choice persist across reboot (`planeradar` NVS namespace).
 
@@ -89,6 +92,19 @@ As range decreases (or aircraft approach), targets move inward; beyond-ring dots
 - Fetch radius: `ui::radar::fetchRadiusKm()` — scales with the active preset to roughly the screen edge (so rim dots have data)
 - Poll interval: `kAdsbFetchIntervalMs` (5 s) in `config.h`
 - Ground aircraft hidden by default (`kAdsbShowGroundAircraft`)
+
+**Recent Changes**
+
+- **Range presets:** added 30 km and 50 km presets to `kRangePresets`.
+  See [include/ui/radar_range.h](include/ui/radar_range.h).
+- **Rendering behavior:** three tag modes implemented in the radar renderer based on active range:
+  - full tags for ranges < 30 km (callsign/type/alt + speed vector)
+  - callsign-only for ranges >= 30 km and < 50 km (no speed vector)
+  - no text labels for ranges >= 50 km (arrow only)
+  See [src/ui/radar_display.cpp](src/ui/radar_display.cpp).
+- **Scale/zoom label:** the ring-3 scale label is drawn on top of aircraft and its anchor is clamped to keep the background fully inside the round display.
+  See [src/ui/radar_display.cpp](src/ui/radar_display.cpp).
+
 
 ## Configuration
 
